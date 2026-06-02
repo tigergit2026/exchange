@@ -9,7 +9,7 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-      background: #f0f4f8;
+      background: linear-gradient(135deg, #e8f0fe 0%, #f5f0ff 100%);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -57,16 +57,40 @@
       margin-top: 6px;
       font-size: 13px;
       color: #6b7280;
-      background: #e5e7eb;
+      background: rgba(255,255,255,0.7);
       padding: 3px 12px;
       border-radius: 20px;
+      backdrop-filter: blur(4px);
     }
+
+    .rate-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .rate-status .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .rate-status.error { color: #ef4444; }
+    .rate-status.error .live-dot { background: #ef4444; animation: none; }
 
     .card {
       background: #fff;
       border-radius: 20px;
       padding: 24px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
       width: 100%;
       max-width: 460px;
       margin-bottom: 16px;
@@ -86,34 +110,31 @@
     }
     .rate-box.sell { border-color: #fde8e8; background: #fff8f8; }
     .rate-box .box-title {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       color: #374151;
       margin-bottom: 8px;
+      line-height: 1.4;
     }
     .rate-box .rate-value {
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 700;
       color: #1a56db;
-      line-height: 1;
+      line-height: 1.1;
     }
     .rate-box.sell .rate-value { color: #dc2626; }
     .rate-box .rate-unit {
-      font-size: 13px;
+      font-size: 12px;
       color: #6b7280;
-      margin-top: 2px;
+      margin-top: 4px;
     }
-    .rate-box .badge {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 10px;
+
+    .spread-note {
+      text-align: center;
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 10px;
     }
-    .badge.blue { background: #dbeafe; color: #1d4ed8; }
-    .badge.red  { background: #fee2e2; color: #dc2626; }
 
     .calc-section-title {
       font-size: 14px;
@@ -200,6 +221,13 @@
       color: #6b7280;
       margin-left: 4px;
     }
+
+    .footer-note {
+      text-align: center;
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -212,6 +240,11 @@
     </div>
     <h1>澳币 / 人民币 换汇计算器</h1>
     <span class="date-tag" id="today-date">—</span>
+  </div>
+
+  <div class="rate-status" id="rate-status">
+    <span class="live-dot"></span>
+    <span id="rate-status-text">正在获取实时汇率…</span>
   </div>
 
   <div class="card">
@@ -227,6 +260,7 @@
         <div class="rate-unit">人民币 (CNY)</div>
       </div>
     </div>
+    <div class="spread-note">买入汇率 = 实时汇率 × 1.015 ｜ 卖出汇率 = 实时汇率 × 0.98</div>
   </div>
 
   <div class="card">
@@ -265,22 +299,14 @@
     </div>
   </div>
 
-  <div style="text-align:center; font-size:12px; color:#9ca3af; margin-top:8px;">
-    参考中间价：1 AUD = 4.8505 CNY（2026-06-02）
-  </div>
+  <div class="footer-note" id="footer-note">汇率数据来源：实时金融行情接口</div>
 
   <script>
-    const RATE = 4.8505;
-    const BUY_SPREAD  = 1.015;
-    const SELL_SPREAD = 0.98;
-    const buyRate  = RATE * BUY_SPREAD;
-    const sellRate = RATE * SELL_SPREAD;
+    // ========== 配置 ==========
+    const BUY_SPREAD  = 1.015;   // 买入汇率系数
+    const SELL_SPREAD = 0.98;    // 卖出汇率系数
 
-    function fmt(n, decimals) {
-      return n.toLocaleString('zh-CN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    }
-    function fmt2(n) { return fmt(n, 2); }
-
+    // ========== 日期 ==========
     (function initDate() {
       const now = new Date();
       const weekNames = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
@@ -288,18 +314,73 @@
         `${now.getFullYear()}年${String(now.getMonth()+1).padStart(2,'0')}月${String(now.getDate()).padStart(2,'0')}日  ${weekNames[now.getDay()]}`;
     })();
 
-    document.getElementById('buy-rate-100').textContent = fmt2(100 * buyRate);
-    document.getElementById('sell-rate-100').textContent = fmt2(100 * sellRate);
+    // ========== 格式化 ==========
+    function fmt(n, d) {
+      if (isNaN(n)) return '—';
+      return n.toLocaleString('zh-CN', { minimumFractionDigits: d, maximumFractionDigits: d });
+    }
+    function fmt2(n) { return fmt(n, 2); }
+    function fmt4(n) { return fmt(n, 4); }
 
-    document.getElementById('aud-input').addEventListener('input', function () {
-      const v = parseFloat(this.value);
-      document.getElementById('aud-result').textContent = (!isNaN(v) && v >= 0) ? fmt2(v * buyRate) : '—';
-    });
+    // ========== 获取实时汇率（带 API Key 的 exchangerarte-api）=======
+    async function fetchRate() {
+      const statusEl   = document.getElementById('rate-status');
+      const statusText = document.getElementById('rate-status-text');
+      const footerEl   = document.getElementById('footer-note');
+      const API_URL = 'https://v6.exchangerate-api.com/v6/46f2da11dd35dfa45becb729/latest/USD';
 
-    document.getElementById('cny-input').addEventListener('input', function () {
-      const v = parseFloat(this.value);
-      document.getElementById('cny-result').textContent = (!isNaN(v) && v >= 0) ? fmt(v / sellRate, 4) : '—';
-    });
+      try {
+        const res = await fetch(API_URL, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.result !== 'success') throw new Error(data['error-type'] || 'API 返回失败');
+
+        // API base = USD，需交叉换算：1 AUD = (CNY/USD) / (AUD/USD)
+        const cr   = data.conversion_rates;
+        const audPerUsd = cr.AUD;
+        const cnyPerUsd = cr.CNY;
+        if (!audPerUsd || !cnyPerUsd) throw new Error('AUD 或 CNY 汇率数据缺失');
+
+        const rate = cnyPerUsd / audPerUsd; // 1 AUD = ? CNY
+        const updateTime = data.time_last_update_utc || '';
+        statusText.textContent = '实时汇率已获取 ✓';
+        footerEl.textContent = `汇率更新：${updateTime}  ｜  1 AUD = ${fmt2(rate)} CNY`;
+        return rate;
+      } catch (e) {
+        console.warn('exchangerate-api 获取失败：', e.message);
+        statusEl.classList.add('error');
+        statusText.textContent = '实时汇率获取失败，已使用参考汇率';
+        footerEl.textContent = '⚠️ 无法获取实时汇率，当前为参考值 4.8505，请以银行报价为准';
+        return 4.8505;
+      }
+    }
+
+    // ========== 主逻辑 ==========
+    async function main() {
+      const RATE = await fetchRate();
+      const buyRate  = RATE * BUY_SPREAD;
+      const sellRate = RATE * SELL_SPREAD;
+
+      // 初始化展示卡
+      document.getElementById('buy-rate-100').textContent  = fmt2(100 * buyRate);
+      document.getElementById('sell-rate-100').textContent = fmt2(100 / sellRate);
+
+      // 计算窗口1：支付澳币 → 得人民币
+      document.getElementById('aud-input').addEventListener('input', function () {
+        const v = parseFloat(this.value);
+        document.getElementById('aud-result').textContent =
+          (!isNaN(v) && v >= 0) ? fmt2(v * buyRate) : '—';
+      });
+
+      // 计算窗口2：支付人民币 → 得澳币
+      document.getElementById('cny-input').addEventListener('input', function () {
+        const v = parseFloat(this.value);
+        document.getElementById('cny-result').textContent =
+          (!isNaN(v) && v >= 0) ? fmt4(v / sellRate) : '—';
+      });
+    }
+
+    main();
   </script>
 </body>
 </html>
