@@ -376,7 +376,7 @@
       document.getElementById('cny-input').addEventListener('input', function () {
         const v = parseFloat(this.value);
         document.getElementById('cny-result').textContent =
-          (!isNaN(v) && v >= 0) ? fmt4(v / sellRate) : '—';
+          (!isNaN(v) && v >= 0) ? fmt2(v / sellRate) : '—';
       });
     }
 
