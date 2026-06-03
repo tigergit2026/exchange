@@ -260,7 +260,7 @@
         <div class="rate-unit">人民币 (CNY)</div>
       </div>
     </div>
-    <div class="spread-note">买入汇率 = 实时汇率 × 1.015 ｜ 卖出汇率 = 实时汇率 × 0.98</div>
+    <div class="spread-note">换汇汇率含点差，仅供参考</div>
   </div>
 
   <div class="card">
@@ -303,8 +303,9 @@
 
   <script>
     // ========== 配置 ==========
-    const BUY_SPREAD  = 1.015;   // 买入汇率系数
+    const BUY_SPREAD  = 1.01;    // ★ 买入汇率系数
     const SELL_SPREAD = 0.98;    // 卖出汇率系数
+    const API_URL = 'https://v6.exchangerate-api.com/v6/46f2da11dd35dfa45becb729/latest/USD';
 
     // ========== 日期 ==========
     (function initDate() {
@@ -322,12 +323,11 @@
     function fmt2(n) { return fmt(n, 2); }
     function fmt4(n) { return fmt(n, 4); }
 
-    // ========== 获取实时汇率（带 API Key 的 exchangerarte-api）=======
+    // ========== 获取实时汇率 ==========
     async function fetchRate() {
       const statusEl   = document.getElementById('rate-status');
       const statusText = document.getElementById('rate-status-text');
       const footerEl   = document.getElementById('footer-note');
-      const API_URL = 'https://v6.exchangerate-api.com/v6/46f2da11dd35dfa45becb729/latest/USD';
 
       try {
         const res = await fetch(API_URL, { signal: AbortSignal.timeout(8000) });
@@ -335,7 +335,7 @@
         const data = await res.json();
         if (data.result !== 'success') throw new Error(data['error-type'] || 'API 返回失败');
 
-        // API base = USD，需交叉换算：1 AUD = (CNY/USD) / (AUD/USD)
+        // base = USD，需交叉换算：1 AUD = (CNY/USD) / (AUD/USD)
         const cr   = data.conversion_rates;
         const audPerUsd = cr.AUD;
         const cnyPerUsd = cr.CNY;
