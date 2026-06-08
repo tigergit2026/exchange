@@ -257,7 +257,7 @@
       <div class="rate-box sell">
         <div class="box-title">想要获得100RMB，需要支付多少AUD</div>
         <div class="rate-value" id="sell-rate-100">—</div>
-        <div class="rate-unit">人民币 (CNY)</div>
+        <div class="rate-unit">澳币 (AUD)</div>
       </div>
     </div>
     <div class="spread-note">换汇汇率含点差，仅供参考</div>
@@ -273,7 +273,7 @@
       <input class="amount-input" type="number" id="aud-input" placeholder="输入澳币金额" min="0" step="any">
     </div>
     <div class="result-row">
-      <div class="result-label">需支付人民币</div>
+      <div class="result-label">可以兑换人民币</div>
       <div>
         <span class="result-value" id="aud-result">—</span>
         <span class="result-unit">CNY</span>
@@ -291,7 +291,7 @@
       <input class="amount-input sell" type="number" id="cny-input" placeholder="输入人民币金额" min="0" step="any">
     </div>
     <div class="result-row sell-result">
-      <div class="result-label">需支付澳币</div>
+      <div class="result-label">可以兑换澳币</div>
       <div>
         <span class="result-value" id="cny-result">—</span>
         <span class="result-unit">AUD</span>
@@ -303,7 +303,7 @@
 
   <script>
     // ========== 配置 ==========
-    const BUY_SPREAD  = 1.01;    // ★ 买入汇率系数
+    const BUY_SPREAD  = 1.012;    // ★ 买入汇率系数
     const SELL_SPREAD = 0.98;    // 卖出汇率系数
     const API_URL = 'https://v6.exchangerate-api.com/v6/46f2da11dd35dfa45becb729/latest/USD';
 
@@ -350,8 +350,8 @@
         console.warn('exchangerate-api 获取失败：', e.message);
         statusEl.classList.add('error');
         statusText.textContent = '实时汇率获取失败，已使用参考汇率';
-        footerEl.textContent = '⚠️ 无法获取实时汇率，当前为参考值 4.8505，请以银行报价为准';
-        return 4.8505;
+        footerEl.textContent = '⚠️ 无法获取实时汇率，当前为参考值 4.85，请以银行报价为准';
+        return 4.85;
       }
     }
 
